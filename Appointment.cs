@@ -64,7 +64,7 @@ class Appointment
 
 	public override string ToString()
 	{
-		return $"[ {Id} ] {StartTime}–{EndTime}, Provider: {ProviderName}, Patient: {PatientName}, {Room}";
+		return $"[ {Id} ] {StartTime.Date:MM-dd-yyyy} {StartTime.TimeOfDay:hh\\:mm}–{EndTime.TimeOfDay:hh\\:mm}, Provider: {ProviderName}, Patient: {PatientName}, Room {Room}";
 	}
 
 }
