@@ -1,4 +1,4 @@
-// Appointment class
+// Appointment Class
 
 
 class Appointment
