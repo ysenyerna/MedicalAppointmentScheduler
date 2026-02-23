@@ -30,8 +30,13 @@ do
 		case 2:
 			Console.WriteLine("- Cancelling an Appointment -");
 			string cancelId = GetInput<string>("Enter appointment ID: ");
-			if (scheduler.Cancel(cancelId))
+			Appointment? cancelAppt = scheduler.FindAppointment(cancelId);
+			if (cancelAppt != null)
+			{
+				scheduler.Cancel(cancelId);
 				WriteColoredLine("Appointment Canceled!", ConsoleColor.Green);
+				Logger.Info("Canceled " + cancelAppt.ToString());
+			}
 			else
 				WriteColoredLine($"Could not find appointment with ID '{cancelId}'.", ConsoleColor.Red);
 			break;
@@ -39,30 +44,7 @@ do
 		// Reschedule Appointment
 		case 3:
 			Console.WriteLine("- Rescheduling an Appointment -");
-			string rescheduleId = GetInput<string>("Enter appointment ID: ");
-			if (scheduler.FindAppointment(rescheduleId) == null)
-			{
-				WriteColoredLine($"Could not find appointment with ID '{rescheduleId}'.", ConsoleColor.Red);
-				break;
-			}
-
-			// Get new times from the user
-			DateTime start = GetInput<DateTime>("Enter start time: ", "Input must be a date!");
-			DateTime end = GetInput<DateTime>("Enter end time: ", "Input must be a date!");
-
-			try {
-				scheduler.Reschedule(rescheduleId, start, end);
-				WriteColoredLine("Appointment Rescheduled!", ConsoleColor.Green);
-			}
-			catch (InvalidAppointmentTimeException)
-			{
-				WriteColoredLine("New appointment times are invalid!", ConsoleColor.Red);
-			}
-			catch (DoubleBookingException)
-			{
-				WriteColoredLine("There is already an appointment at that time!", ConsoleColor.Red);
-			}
-
+			RescheduleAppointment();
 			break;
 
 		// List Appointments
@@ -151,18 +133,61 @@ void AddAppointment()
 	Appointment appt = new(id, patient, provider, start, end, room);
 	try {
 		scheduler.Add(appt);
+		Logger.Info("Added " + appt.ToString());
 		WriteColoredLine("Appointment Added!", ConsoleColor.Green);
 	}
 	catch (InvalidAppointmentTimeException)
 	{
+		Logger.Warn($"Attempted to reschedule an appointment for {start.TimeOfDay:hh\\:mm}–{end.TimeOfDay:hh\\:mm}");
 		WriteColoredLine("Appointment times are invalid!", ConsoleColor.Red);
 	}
 	catch (DoubleBookingException)
 	{
+		Logger.Warn($"Attempted to double book an appointment for {appt.ProviderName} at {start.TimeOfDay:hh\\:mm}");
 		WriteColoredLine("There is already an appointment at that time!", ConsoleColor.Red);
+	}
+	catch (Exception ex)
+	{
+		Logger.Error("Unexpected error when adding an appointment: " + ex.Message);
 	}
 }
 
+void RescheduleAppointment()
+{
+	string rescheduleId = GetInput<string>("Enter appointment ID: ");
+	var rescheduleAppt = scheduler.FindAppointment(rescheduleId);
+	if (rescheduleAppt == null)
+	{
+		WriteColoredLine($"Could not find appointment with ID '{rescheduleId}'.", ConsoleColor.Red);
+		return;
+	}
+
+	// Get new times from the user
+	DateTime start = GetInput<DateTime>("Enter start time: ", "Input must be a date!");
+	DateTime end = GetInput<DateTime>("Enter end time: ", "Input must be a date!");
+
+	try {
+		DateTime oldStart = rescheduleAppt.StartTime;
+		DateTime oldEnd = rescheduleAppt.EndTime;
+		scheduler.Reschedule(rescheduleId, start, end);
+		Logger.Info($"Rescheduled [{rescheduleAppt.Id}] {oldStart:HH:mm}-{oldEnd:HH:mm} -> {start:HH:mm}-{end:HH:mm}");
+		WriteColoredLine("Appointment Rescheduled!", ConsoleColor.Green);
+	}
+	catch (InvalidAppointmentTimeException)
+	{
+		Logger.Warn($"Attempted to reschedule an appointment for {start.TimeOfDay:hh\\:mm}–{end.TimeOfDay:hh\\:mm}");
+		WriteColoredLine("New appointment times are invalid!", ConsoleColor.Red);
+	}
+	catch (DoubleBookingException)
+	{
+		Logger.Warn($"Attempted to double book an appointment for {rescheduleAppt.ProviderName} at {start.TimeOfDay:hh\\:mm}");
+		WriteColoredLine("There is already an appointment at that time!", ConsoleColor.Red);
+	}
+	catch (Exception ex)
+	{
+		Logger.Error("Unexpected error when rescheduling an appointment: " + ex.Message);
+	}
+}
 
 // Prompts the user to enter a value and returns the input as the specified type
 static T GetInput<T>(string message, string? errorMessage = null) 
