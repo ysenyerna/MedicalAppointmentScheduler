@@ -1,6 +1,5 @@
 // Appointment Class
 
-
 class Appointment
 {
 	// Appointment ID 
@@ -52,8 +51,11 @@ class Appointment
 		Room = room;
 		StartTime = startTime;
 		EndTime = endTime;
-
 	}
+
+	// Constructor for creating a copy
+	public Appointment(Appointment appt) : this(appt.Id, appt.PatientName, appt.ProviderName, appt.StartTime, appt.EndTime, appt.Room) {}
+
 
 	// Methods
 	public void Reschedule(DateTime newStart, DateTime newEnd)

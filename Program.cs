@@ -1,8 +1,5 @@
 ﻿// Medical Appointment Scheduler Application //
 
-
-
-
 AppointmentScheduler scheduler = new();
 
 
@@ -16,7 +13,6 @@ do
 
 	// Get user choice
 	int choice = GetInput<int>("Select an option: ", "Choice must be a number!");
-
 
 	switch (choice)
 	{
@@ -63,7 +59,7 @@ do
 			string provider = GetInput<string>("Enter provider name: ");
 			var apptsByProvider = scheduler.ListByProvider(provider);
 			if (apptsByProvider.Count == 0)
-				WriteColoredLine("There are not appointments scheduled with that provider.", ConsoleColor.Green);
+				WriteColoredLine("There are no appointments scheduled with that provider.", ConsoleColor.Green);
 			else
 				apptsByProvider.ForEach(a => Console.WriteLine(a.ToString()));
 			break;
@@ -74,7 +70,7 @@ do
 			DateTime date = GetInput<DateTime>("Enter date: ", "Input must be a date!");
 			var apptsByDay = scheduler.ListByDay(date);
 			if (apptsByDay.Count == 0)
-				WriteColoredLine("There are not appointments scheduled for that date.", ConsoleColor.Green);
+				WriteColoredLine("There are no appointments scheduled for that date.", ConsoleColor.Green);
 			else
 				apptsByDay.ForEach(a => Console.WriteLine(a.ToString()));
 			break;
@@ -136,14 +132,14 @@ void AddAppointment()
 		Logger.Info("Added " + appt.ToString());
 		WriteColoredLine("Appointment Added!", ConsoleColor.Green);
 	}
-	catch (InvalidAppointmentTimeException)
+	catch (InvalidAppointmentTimeException ex)
 	{
-		Logger.Warn($"Attempted to reschedule an appointment for {start.TimeOfDay:hh\\:mm}–{end.TimeOfDay:hh\\:mm}");
+		Logger.Warn($"Attempted to schedule an appointment for {start.TimeOfDay:hh\\:mm}–{end.TimeOfDay:hh\\:mm} on {start:MM-dd-yyyy}: " + ex.Message);
 		WriteColoredLine("Appointment times are invalid!", ConsoleColor.Red);
 	}
-	catch (DoubleBookingException)
+	catch (DoubleBookingException ex)
 	{
-		Logger.Warn($"Attempted to double book an appointment for {appt.ProviderName} at {start.TimeOfDay:hh\\:mm}");
+		Logger.Warn($"Attempted to double book an appointment for {appt.ProviderName} at {start.TimeOfDay:hh\\:mm} on {start:MM-dd-yyyy}: " + ex.Message);
 		WriteColoredLine("There is already an appointment at that time!", ConsoleColor.Red);
 	}
 	catch (Exception ex)
@@ -175,12 +171,12 @@ void RescheduleAppointment()
 	}
 	catch (InvalidAppointmentTimeException)
 	{
-		Logger.Warn($"Attempted to reschedule an appointment for {start.TimeOfDay:hh\\:mm}–{end.TimeOfDay:hh\\:mm}");
+		Logger.Warn($"Attempted to reschedule appointment [{rescheduleAppt.Id}] for {start.TimeOfDay:hh\\:mm}–{end.TimeOfDay:hh\\:mm} on {start:MM-dd-yyyy}");
 		WriteColoredLine("New appointment times are invalid!", ConsoleColor.Red);
 	}
 	catch (DoubleBookingException)
 	{
-		Logger.Warn($"Attempted to double book an appointment for {rescheduleAppt.ProviderName} at {start.TimeOfDay:hh\\:mm}");
+		Logger.Warn($"Attempted to double book an appointment for {rescheduleAppt.ProviderName} at {start.TimeOfDay:hh\\:mm} on {start:MM-dd-yyyy}");
 		WriteColoredLine("There is already an appointment at that time!", ConsoleColor.Red);
 	}
 	catch (Exception ex)

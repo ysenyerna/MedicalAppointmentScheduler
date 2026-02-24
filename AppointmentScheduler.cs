@@ -15,13 +15,13 @@ class AppointmentScheduler {
 	// Adds an appointment, throws exceptions if the appointment time is invalid
 	public void Add(Appointment appt)
 	{
-		if (!ValidateAppointmentHours(appt))
+		if (!ValidateAppointmentHours(appt, out string timeError))
 		{
-			throw new InvalidAppointmentTimeException();
+			throw new InvalidAppointmentTimeException(timeError);
 		}
-		if (!HasDoubleBookings(appt))
+		if (!HasDoubleBookings(appt, out string doubleBookError))
 		{
-			throw new DoubleBookingException();
+			throw new DoubleBookingException(doubleBookError);
 		}
 
 		// Add the appointment
@@ -42,49 +42,68 @@ class AppointmentScheduler {
 		if (appt == null)
 			return false;
 
-		if (!ValidateAppointmentHours(newStart, newEnd))
+		if (!ValidateAppointmentHours(newStart, newEnd, out string timeError))
 		{
-			throw new InvalidAppointmentTimeException();
+			throw new InvalidAppointmentTimeException(timeError);
 		}
-		if (!HasDoubleBookings(newStart, newEnd, appt.ProviderName, appt.Id))
+		if (!HasDoubleBookings(newStart, newEnd, appt.ProviderName, out string doubleBookError, appt.Id))
 		{
-			throw new DoubleBookingException();
+			throw new DoubleBookingException(doubleBookError);
 		}
 
 		appt.Reschedule(newStart, newEnd);
 		return true;
 	}
 
-	public List<Appointment> ListAppointments()
-		=> [.. _appointments];
+
+
+
+	// Returns a deep copy of the _appointments list
+	List<Appointment> CloneAppointmentList()
+	{
+		List<Appointment> newlist = [];
+		_appointments.ForEach(a => newlist.Add(new(a))); // clone each appointment and add to new list
+		return newlist;
+	}
+
+
+	// Methods for getting appointment info, all return copies of the appointment objects so they can't be modified
+	public List<Appointment> ListAppointments() 
+		=> [.. CloneAppointmentList()];
 
 	public List<Appointment> ListByDay(DateTime day)
-		=> [.. _appointments.Where(a => a.StartTime.Date == day.Date)];
-
+		=> [.. CloneAppointmentList().Where(a => a.StartTime.Date == day.Date)];
 
 	public List<Appointment> ListByProvider(string provider)
-		=> [.. _appointments.Where(a => string.Equals(a.ProviderName, provider, StringComparison.OrdinalIgnoreCase))];
-
+		=> [.. CloneAppointmentList().Where(a => string.Equals(a.ProviderName, provider, StringComparison.OrdinalIgnoreCase))];
 
 	public Appointment? FindAppointment(string id) 
-		=> _appointments.Find(a => a.Id == id);
+		=> CloneAppointmentList().Find(a => a.Id == id);
 	
 
-	// Returns true if appointment hours are valid
-	static bool ValidateAppointmentHours(Appointment appt)
-		=> ValidateAppointmentHours(appt.StartTime, appt.EndTime);
 
-	static bool ValidateAppointmentHours(DateTime start, DateTime end)
+
+	// Validation methods
+
+
+	// Returns true if appointment hours are valid, otherwise outputs an error message and returns false
+	static bool ValidateAppointmentHours(Appointment appt, out string errorMessage)
+		=> ValidateAppointmentHours(appt.StartTime, appt.EndTime, out errorMessage);
+
+	static bool ValidateAppointmentHours(DateTime start, DateTime end, out string errorMessage)
 	{
+		errorMessage = "";
 		// Check if the start and end times are on the same day
 		if (start.Date != end.Date)
 		{
+			errorMessage = "Appointment times are not on the same day";
 			return false;
 		}
 
 		// Check if start time is before end time
 		if (start >= end)
 		{
+			errorMessage = "Appointment start time is after appointment end time";
 			return false;
 		}
 
@@ -95,24 +114,28 @@ class AppointmentScheduler {
 		if (startTime < OpeningTime || startTime > ClosingTime
 			|| endTime < OpeningTime || endTime > ClosingTime)
 		{
+			errorMessage = $"Appointment time is not within valid hours. Appointments must be between {OpeningTime:hh\\:mm} and {ClosingTime:hh\\:mm}";
 			return false;
 		}
 
 		// Check if the appointment is longer than the minimum appointment time
 		if ((endTime - startTime) < TimeSpan.FromMinutes(MinimumAppointmentDuration))
 		{
+			errorMessage = $"Appointment is too short. Appointments must be {MinimumAppointmentDuration} minutes or longer";
 			return false;
 		}
 
 		return true;
 	}
 
+
 	// Checks if the appointment time overlaps with an existing appointment
-	public bool HasDoubleBookings(Appointment appt)
-		=> HasDoubleBookings(appt.StartTime, appt.EndTime, appt.ProviderName, appt.Id);
+	public bool HasDoubleBookings(Appointment appt, out string errorMessage)
+		=> HasDoubleBookings(appt.StartTime, appt.EndTime, appt.ProviderName, out errorMessage, appt.Id);
 	
-	public bool HasDoubleBookings(DateTime startTime, DateTime endTime, string provider, string? ignoreId = null)
+	public bool HasDoubleBookings(DateTime startTime, DateTime endTime, string provider, out string errorMessage, string? ignoreId = null)
 	{
+		errorMessage = "";
 		List<Appointment> appts = ListByProvider(provider);
 
 		foreach (Appointment otherAppt in appts)
@@ -125,6 +148,7 @@ class AppointmentScheduler {
 			if (startTime < otherAppt.EndTime 
 				&& otherAppt.StartTime < endTime)
 			{
+				errorMessage = $"Appointment [{otherAppt.Id}] is already booked at that time with that provider";
 				return false;
 			}
 		}

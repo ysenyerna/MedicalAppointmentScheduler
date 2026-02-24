@@ -19,7 +19,6 @@ static class Logger
 		Write("ERROR: ", message);
 	}
 
-
 	static void Write(string level, string message)
 	{
 		string line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {level}: {message}";
@@ -31,7 +30,5 @@ static class Logger
 		{
 			Console.Error.WriteLine("LOGGING FAILURE: " + ex.Message);
 		}
-
 	}
-
 }
